@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vector Retrieval — FDE · DiskANN</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#fff4ec;
+    --ink:#2c2420;
+    --sub:#7a6c61;
+    --accent:#ff6b4a;
+    --card:#fffdfb;
+    --mx:8cqw; --my:7cqh;
+    --fs-title:5.56cqh;
+    --fs-body:3.7cqh;
+    --fs-cap:3.3cqh;
+    --fs-mono:2.6cqh;
+    --fs-card:2.4cqh;
+    --pretendard:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;
+    --mono:'Space Mono','SFMono-Regular',Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:#efe6dd;
+    font-family:var(--pretendard);
+    color:var(--ink);
+    overflow-y:scroll;
+    scroll-snap-type:y mandatory;
+    scroll-behavior:smooth;
+  }
+  .deck{width:100%}
+  .slot{
+    height:100vh;width:100%;
+    display:flex;align-items:center;justify-content:center;
+    scroll-snap-align:start;scroll-snap-stop:always;
+  }
+  .stage{
+    position:relative;
+    width:min(100vw,177.78vh);
+    aspect-ratio:16/9;
+    container-type:size;
+    overflow:hidden;
+    background:var(--bg);
+    box-shadow:0 1.4cqh 6cqh rgba(60,40,30,.18);
+  }
+  .glow{position:absolute;border-radius:50%;filter:blur(8cqh);z-index:0;pointer-events:none}
+  .glow.a{width:60cqh;height:60cqh;top:-18cqh;right:-12cqh;background:rgba(255,221,196,.7)}
+  .glow.b{width:55cqh;height:55cqh;bottom:-20cqh;left:-14cqh;background:rgba(255,107,74,.16)}
+  .safe{
+    position:absolute;left:var(--mx);right:var(--mx);top:var(--my);bottom:var(--my);
+    display:flex;flex-direction:column;z-index:2;
+  }
+  /* header */
+  .rh{display:flex;align-items:center;justify-content:space-between;flex:0 0 auto}
+  .rh .label{display:flex;align-items:center;gap:1cqw;font-family:var(--mono);
+    font-size:1.9cqh;letter-spacing:.22em;text-transform:uppercase;color:var(--sub)}
+  .rh .tick{width:.55cqw;height:2.6cqh;background:var(--accent);border-radius:2px}
+  .rh .run{font-family:var(--mono);font-size:1.9cqh;letter-spacing:.16em;color:var(--sub);text-transform:uppercase}
+  /* title */
+  .titlewrap{flex:0 0 auto;margin-top:2.4cqh}
+  .kicker{font-family:var(--mono);font-size:var(--fs-mono);letter-spacing:.2em;
+    text-transform:uppercase;color:var(--sub);margin-bottom:.8cqh}
+  .title{font-size:var(--fs-title);font-weight:800;line-height:1.08;letter-spacing:-.01em}
+  .title em{font-style:normal;color:var(--accent)}
+  /* content */
+  .viz{flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center;margin:1cqh 0}
+  .viz svg{width:100%;height:100%;display:block;overflow:visible}
+  /* footer */
+  .rf{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;
+    font-family:var(--mono);font-size:1.9cqh;letter-spacing:.12em;color:var(--sub)}
+  .rf b{color:var(--ink)}
+  /* svg text labels */
+  .vlabel{font-family:var(--mono);font-size:25px;fill:var(--sub);letter-spacing:.04em}
+  .vlabel.big{font-size:30px;fill:var(--ink);font-weight:700}
+  .vlabel.acc{fill:var(--accent);font-weight:700}
+  .vname{font-family:var(--mono);font-size:23px;font-weight:700;fill:#2c2420;letter-spacing:.02em}
+  /* right rail */
+  .rail{position:fixed;right:2.2vw;top:50%;transform:translateY(-50%);
+    display:flex;flex-direction:column;gap:1.4vh;z-index:50}
+  .rail a{width:.8vh;height:.8vh;border-radius:50%;background:rgba(60,40,30,.28);
+    transition:all .35s ease;display:block}
+  .rail a.on{height:3.2vh;background:var(--accent);border-radius:1vh}
+  .counter{position:fixed;left:2.2vw;bottom:2.4vh;font-family:var(--mono);
+    font-size:1.7vh;letter-spacing:.14em;color:#6b5d54;z-index:50}
+  .counter b{color:#2c2420}
+  @media (prefers-reduced-motion:reduce){
+    body{scroll-behavior:auto}
+  }
+</style>
+</head>
+<body>
+<div class="deck" id="deck">
+
+  <!-- SLIDE 1 : COMPARE -->
+  <section class="slot" data-idx="0">
+    <div class="stage">
+      <div class="glow a"></div><div class="glow b"></div>
+      <div class="safe">
+        <header class="rh">
+          <div class="label"><span class="tick"></span><span>01 — COMPARE</span></div>
+          <div class="run">Vector Retrieval</div>
+        </header>
+        <div class="titlewrap">
+          <div class="kicker">Multi-vector similarity</div>
+          <h1 class="title">싱글 벡터 탐색 vs <em>멀티 벡터 탐색</em></h1>
+        </div>
+        <div class="viz"><svg id="svg1" viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid meet"></svg></div>
+        <footer class="rf"><span>vector-viz</span><span><b>01</b> / 03</span></footer>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 2 : FDE -->
+  <section class="slot" data-idx="1">
+    <div class="stage">
+      <div class="glow a"></div><div class="glow b"></div>
+      <div class="safe">
+        <header class="rh">
+          <div class="label"><span class="tick"></span><span>02 — FDE</span></div>
+          <div class="run">Vector Retrieval</div>
+        </header>
+        <div class="titlewrap">
+          <div class="kicker">Fixed Dimensional Encodings</div>
+          <h1 class="title"><em>FDE</em></h1>
+        </div>
+        <div class="viz"><svg id="svg2" viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid meet"></svg></div>
+        <footer class="rf"><span>vector-viz</span><span><b>02</b> / 03</span></footer>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 3 : DISKANN -->
+  <section class="slot" data-idx="2">
+    <div class="stage">
+      <div class="glow a"></div><div class="glow b"></div>
+      <div class="safe">
+        <header class="rh">
+          <div class="label"><span class="tick"></span><span>03 — DISKANN</span></div>
+          <div class="run">Vector Retrieval</div>
+        </header>
+        <div class="titlewrap">
+          <div class="kicker">Approximate Nearest Neighbor</div>
+          <h1 class="title"><em>DiskANN</em></h1>
+        </div>
+        <div class="viz"><svg id="svg3" viewBox="0 0 1000 560" preserveAspectRatio="xMidYMid meet"></svg></div>
+        <footer class="rf"><span>vector-viz</span><span><b>03</b> / 03</span></footer>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<nav class="rail" id="rail">
+  <a data-go="0" class="on"></a><a data-go="1"></a><a data-go="2"></a>
+</nav>
+<div class="counter"><b id="cnum">01</b> / 03</div>
+
+<script>
+const NS='http://www.w3.org/2000/svg';
+function el(tag,a){const e=document.createElementNS(NS,tag);for(const k in a)e.setAttribute(k,a[k]);return e;}
+function lerp(a,b,t){return a+(b-a)*t;}
+function clamp(x,a,b){return Math.max(a,Math.min(b,x));}
+function ease(t){return t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;}
+const PAL=['#ff5a52','#ff8a65','#f6c453','#ffb24d','#7cc36b','#4aa8e0','#5b6fd6','#9b5bd6','#d65ba0','#2e8fd6'];
+const reduced = window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+/* ---------- generic looping animator ---------- */
+class Anim{
+  constructor(svg,build){
+    this.svg=svg;
+    const m=build(svg);
+    this.tick=m.tick; this.reset=m.reset||(()=>{}); this.staticT=m.staticT||4000;
+    this.raf=null; this.t0=0; this.on=false;
+  }
+  start(){
+    if(this.on)return; this.on=true; this.reset();
+    if(reduced){ this.tick(this.staticT); this.on=false; return; }
+    this.t0=performance.now();
+    const loop=(now)=>{ if(!this.on)return; this.tick(now-this.t0); this.raf=requestAnimationFrame(loop); };
+    this.raf=requestAnimationFrame(loop);
+  }
+  stop(){ this.on=false; if(this.raf)cancelAnimationFrame(this.raf); }
+}
+
+/* ===================================================================
+   SLIDE 1 — single vs multi vector comparison (m×n vs 1)
+=================================================================== */
+function buildCompare(svg){
+  // panel headers
+  // LEFT = single vector, RIGHT = multi vector
+  svg.appendChild(Object.assign(el('text',{x:250,y:46,'text-anchor':'middle',class:'vlabel big'}),{textContent:'싱글 벡터 · 내적'}));
+  svg.appendChild(Object.assign(el('text',{x:750,y:46,'text-anchor':'middle',class:'vlabel big'}),{textContent:'멀티 벡터 · Chamfer'}));
+  svg.appendChild(el('line',{x1:500,y1:70,x2:500,y2:470,stroke:'rgba(44,36,32,.14)','stroke-width':2,'stroke-dasharray':'5 9'}));
+
+  function nameLabel(x,y,txt,r){const t=el('text',{x:x,y:y-r-12,'text-anchor':'middle',class:'vname'});t.textContent=txt;svg.appendChild(t);}
+
+  // LEFT : single vector (one query, one doc)
+  const sq={x:175,y:265}, sd={x:365,y:265};
+  const sline=el('line',{x1:sq.x,y1:sq.y,x2:sd.x,y2:sd.y,stroke:'#ff6b4a','stroke-width':4,'stroke-linecap':'round'}); svg.appendChild(sline);
+  svg.appendChild(el('circle',{cx:sq.x,cy:sq.y,r:24,fill:PAL[3],stroke:'#fff','stroke-width':3}));
+  svg.appendChild(el('circle',{cx:sd.x,cy:sd.y,r:24,fill:PAL[6],stroke:'#fff','stroke-width':3}));
+  nameLabel(sq.x,sq.y,'a',24); nameLabel(sd.x,sd.y,'b',24);
+  const cntS=el('text',{x:270,y:478,'text-anchor':'middle',class:'vlabel acc'}); cntS.textContent='1 비교'; svg.appendChild(cntS);
+
+  // RIGHT : multi vector (query a,b,c × doc d,e,f,g)
+  const Lq=[{x:610,y:185},{x:610,y:265},{x:610,y:345}];
+  const Ld=[{x:850,y:150},{x:850,y:243},{x:850,y:336},{x:850,y:429}];
+  const qn=['a','b','c'], dn=['d','e','f','g'];
+  const matched=Lq.map(q=>{let b=0,bd=1e9;Ld.forEach((d,j)=>{const dd=(q.x-d.x)**2+(q.y-d.y)**2;if(dd<bd){bd=dd;b=j;}});return b;});
+
+  const lines=[];
+  Lq.forEach((q,i)=>Ld.forEach((d,j)=>{
+    const ln=el('line',{x1:q.x,y1:q.y,x2:d.x,y2:d.y,stroke:'#caa6a0','stroke-width':2,opacity:0,'stroke-linecap':'round'});
+    svg.appendChild(ln); lines.push({ln,i,j});
+  }));
+  Lq.forEach((q,i)=>{svg.appendChild(el('circle',{cx:q.x,cy:q.y,r:19,fill:PAL[i],stroke:'#fff','stroke-width':3}));nameLabel(q.x,q.y,qn[i],19);});
+  Ld.forEach((d,j)=>{svg.appendChild(el('circle',{cx:d.x,cy:d.y,r:19,fill:PAL[5+j],stroke:'#fff','stroke-width':3}));nameLabel(d.x,d.y,dn[j],19);});
+  const cntM=el('text',{x:735,y:478,'text-anchor':'middle',class:'vlabel acc'}); svg.appendChild(cntM);
+
+  const P=7200;
+  function tick(t){
+    const tt=t%P;
+    // single pulse (left)
+    const pulse=.5+.5*Math.sin(tt/280);
+    sline.setAttribute('opacity',.55+.45*pulse);
+    sline.setAttribute('stroke-width',3.2+2.4*pulse);
+    // multi sweep (right)
+    if(tt<4500){
+      const row=Math.min(2,Math.floor(tt/1500));
+      const within=clamp((tt-row*1500)/1500,0,1);
+      lines.forEach(o=>{
+        let op=0,col='#caa6a0',w=1.8;
+        if(o.i<row){ op=.16; if(o.j===matched[o.i]){op=.85;col='#ff6b4a';w=3.2;} }
+        else if(o.i===row){
+          const appear=within>(o.j+.2)/4.2?1:0;
+          if(o.j===matched[o.i]){ op=appear?(within>.55?.92:.35):0; col='#ff6b4a'; w=3.2; }
+          else { op=appear?.4:0; }
+        }
+        o.ln.setAttribute('opacity',op);o.ln.setAttribute('stroke',col);o.ln.setAttribute('stroke-width',w);
+      });
+      cntM.textContent='m × n = '+Math.round(row*4+within*4);
+    } else if(tt<5900){
+      lines.forEach(o=>{const m=o.j===matched[o.i];o.ln.setAttribute('opacity',m?.92:.4);o.ln.setAttribute('stroke',m?'#ff6b4a':'#caa6a0');o.ln.setAttribute('stroke-width',m?3.2:1.8);});
+      cntM.textContent='m × n = 12';
+    } else {
+      const f=clamp(1-(tt-5900)/1300,0,1);
+      lines.forEach(o=>{const m=o.j===matched[o.i];o.ln.setAttribute('opacity',(m?.92:.4)*f);});
+      cntM.textContent='m × n = 12';
+    }
+  }
+  return {tick,staticT:5200};
+}
+
+/* ===================================================================
+   SLIDE 2 — FDE : variable token count -> fixed length vector
+=================================================================== */
+function buildFDE(svg){
+  const inX=140, lanesY=[110,210,310,410], laneX0=380, laneW=230, outX=835;
+  // lane pills (fixed K=4 buckets)
+  lanesY.forEach(y=>svg.appendChild(el('rect',{x:laneX0,y:y-34,width:laneW,height:68,rx:18,
+    fill:'rgba(255,107,74,.05)',stroke:'rgba(255,107,74,.28)','stroke-width':1.5,'stroke-dasharray':'5 7'})));
+  // output slots (fixed length)
+  const outEls=lanesY.map((y,i)=>{const s=el('rect',{x:outX-30,y:y-30,width:60,height:60,rx:14,
+    fill:PAL[(i*2)%PAL.length],opacity:.18,stroke:'rgba(44,36,32,.25)','stroke-width':1.6}); svg.appendChild(s); return s;});
+  // output bracket showing constant height
+  svg.appendChild(el('line',{x1:outX+48,y1:lanesY[0]-32,x2:outX+48,y2:lanesY[3]+32,stroke:'rgba(44,36,32,.35)','stroke-width':2}));
+  svg.appendChild(el('line',{x1:outX+44,y1:lanesY[0]-32,x2:outX+52,y2:lanesY[0]-32,stroke:'rgba(44,36,32,.35)','stroke-width':2}));
+  svg.appendChild(el('line',{x1:outX+44,y1:lanesY[3]+32,x2:outX+52,y2:lanesY[3]+32,stroke:'rgba(44,36,32,.35)','stroke-width':2}));
+
+  const pool=[]; for(let i=0;i<9;i++){const c=el('circle',{r:16,fill:PAL[i%PAL.length],opacity:0,stroke:'#fff','stroke-width':2.5});svg.appendChild(c);pool.push(c);}
+  const inLbl=el('text',{x:inX,y:478,'text-anchor':'middle',class:'vlabel acc'}); svg.appendChild(inLbl);
+  const outLbl=el('text',{x:outX,y:478,'text-anchor':'middle',class:'vlabel'}); outLbl.textContent='고정 출력 = 4'; svg.appendChild(outLbl);
+  svg.appendChild(Object.assign(el('text',{x:inX,y:54,'text-anchor':'middle',class:'vlabel big'}),{textContent:'토큰 벡터'}));
+  svg.appendChild(Object.assign(el('text',{x:495,y:54,'text-anchor':'middle',class:'vlabel big'}),{textContent:'버킷팅 → 집계'}));
+  svg.appendChild(Object.assign(el('text',{x:outX,y:54,'text-anchor':'middle',class:'vlabel big'}),{textContent:'FDE'}));
+
+  const Ns=[9];
+  let lastLoop=-1,N=5,assign=[],inY=[],laneIdx=[],laneCnt=[0,0,0,0];
+  function setup(loop){
+    N=Ns[((loop%Ns.length)+Ns.length)%Ns.length];
+    inY=[]; for(let i=0;i<N;i++)inY.push(70+360*(i+1)/(N+1));
+    assign=[]; for(let i=0;i<N;i++)assign.push(i%4);
+    laneCnt=[0,0,0,0]; laneIdx=[]; for(let i=0;i<N;i++)laneIdx.push(laneCnt[assign[i]]++);
+  }
+  function slotX(idx,count){ if(count<=1)return 495; return 400+200*(idx/(count-1)); }
+
+  const P=7600;
+  function tick(t){
+    const loop=Math.floor(t/P);
+    if(loop!==lastLoop){lastLoop=loop;setup(loop);}
+    const tt=t%P;
+    inLbl.textContent='입력 N='+N;
+    for(let i=0;i<9;i++){
+      const c=pool[i];
+      if(i>=N){c.setAttribute('opacity',0);continue;}
+      const b=assign[i];
+      const p0={x:inX,y:inY[i]};
+      const pLane={x:slotX(laneIdx[i],laneCnt[b]),y:lanesY[b]};
+      const pCtr={x:495,y:lanesY[b]};
+      const pOut={x:outX,y:lanesY[b]};
+      let pos,op=1,r=16;
+      if(tt<1000){op=clamp(tt/600,0,1);pos=p0;}
+      else if(tt<2900){const f=ease(clamp((tt-1000)/1700,0,1));pos={x:lerp(p0.x,pLane.x,f),y:lerp(p0.y,pLane.y,f)};}
+      else if(tt<4400){const f=ease(clamp((tt-2900)/1300,0,1));pos={x:lerp(pLane.x,pCtr.x,f),y:lanesY[b]};
+        if(laneIdx[i]!==0)op=1-f; else r=16+(laneCnt[b]>1?4:0)*f;}
+      else if(tt<6000){
+        if(laneIdx[i]!==0){op=0;pos=pCtr;}
+        else{const f=ease(clamp((tt-4400)/1400,0,1));pos={x:lerp(pCtr.x,pOut.x,f),y:lanesY[b]};r=lerp(20,18,f);}
+      } else { if(laneIdx[i]!==0)op=0; pos=pOut; r=18; }
+      c.setAttribute('cx',pos.x);c.setAttribute('cy',pos.y);c.setAttribute('opacity',op);c.setAttribute('r',r);
+    }
+    const filled=tt>5200;
+    outEls.forEach(s=>s.setAttribute('opacity',filled?.92:.16));
+  }
+  return {tick,reset:()=>{lastLoop=-1;},staticT:6500};
+}
+
+/* ===================================================================
+   SLIDE 3 — DiskANN : graph + beam search
+=================================================================== */
+function buildDiskANN(svg){
+  let seed=20240611;
+  const rnd=()=>{seed=(seed*1103515245+12345)&0x7fffffff;return seed/0x7fffffff;};
+  const cols=6,rows=4,nodes=[];
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)
+    nodes.push({x:150+c*(700/(cols-1))+(rnd()-.5)*70, y:90+r*(360/(rows-1))+(rnd()-.5)*54});
+  const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+  const adj=nodes.map((n,i)=>nodes.map((m,j)=>({j,d:dist(n,m)})).filter(o=>o.j!==i).sort((a,b)=>a.d-b.d).slice(0,3).map(o=>o.j));
+  adj.forEach((nb,i)=>nb.forEach(j=>{if(!adj[j].includes(i))adj[j].push(i);}));
+  const seen=new Set(),edges=[];
+  adj.forEach((nb,i)=>nb.forEach(j=>{const k=Math.min(i,j)+'_'+Math.max(i,j);if(!seen.has(k)){seen.add(k);edges.push([i,j]);}}));
+  const edgeEls=edges.map(([i,j])=>{const l=el('line',{x1:nodes[i].x,y1:nodes[i].y,x2:nodes[j].x,y2:nodes[j].y,stroke:'rgba(44,36,32,.12)','stroke-width':1.5});svg.appendChild(l);return {l,i,j};});
+  const nodeEls=nodes.map(n=>{const c=el('circle',{cx:n.x,cy:n.y,r:13,fill:'#d3c8bf',stroke:'#fff','stroke-width':2.5});svg.appendChild(c);return c;});
+  const qRing=el('circle',{r:20,fill:'none',stroke:'#ff6b4a','stroke-width':3});svg.appendChild(qRing);
+  const qDot=el('circle',{r:7,fill:'#ff6b4a'});svg.appendChild(qDot);
+  const lbl=el('text',{x:500,y:548,'text-anchor':'middle',class:'vlabel acc'});svg.appendChild(lbl);
+
+  const queries=[{x:790,y:130}];
+  let entry=0,bd=1e9;const ctr={x:500,y:280};nodes.forEach((n,i)=>{const d=dist(n,ctr);if(d<bd){bd=d;entry=i;}});
+  const L=4;
+  function search(q){
+    const visited=new Set();const trace=[];let cand=[entry];const dq=i=>dist(nodes[i],q);
+    while(true){
+      let cur=-1,cd=1e9;cand.forEach(i=>{if(!visited.has(i)&&dq(i)<cd){cd=dq(i);cur=i;}});
+      if(cur<0)break;visited.add(cur);
+      adj[cur].forEach(j=>{if(!cand.includes(j))cand.push(j);});
+      cand=[...new Set(cand)].sort((a,b)=>dq(a)-dq(b)).slice(0,L);
+      trace.push({cur,beam:[...cand]});
+      if(trace.length>13)break;
+    }
+    const result=[...visited].sort((a,b)=>dq(a)-dq(b)).slice(0,3);
+    return {trace,result};
+  }
+  const STEP=1700,TAIL=3000;
+  let loopN=-1,cur=null,loopStart=0,dur=0;
+  function newLoop(){loopN++;const q=queries[((loopN%queries.length)+queries.length)%queries.length];cur=Object.assign({q},search(q));dur=cur.trace.length*STEP+TAIL;}
+
+  function tick(t){
+    if(cur===null||t-loopStart>dur){newLoop();loopStart=t;}
+    const local=t-loopStart, q=cur.q;
+    qDot.setAttribute('cx',q.x);qDot.setAttribute('cy',q.y);qRing.setAttribute('cx',q.x);qRing.setAttribute('cy',q.y);
+    const pulse=.5+.5*Math.sin(t/480);
+    qRing.setAttribute('r',18+4*pulse);qRing.setAttribute('opacity',.45+.4*pulse);
+    const step=Math.floor(local/STEP);
+    const done=step>=cur.trace.length;
+    const shown=cur.trace.slice(0,Math.min(step+1,cur.trace.length));
+    const visited=new Set(shown.map(s=>s.cur));
+    const curStep=done?null:cur.trace[step];
+    const beam=new Set(curStep?curStep.beam:(done?cur.result:[]));
+    nodeEls.forEach((c,i)=>{
+      let fill='#d3c8bf',r=13,sw=2.5,stroke='#fff';
+      if(visited.has(i)){fill='#ff8a65';}
+      if(beam.has(i)){stroke='#5b6fd6';sw=3.4;}
+      if(curStep&&curStep.cur===i){fill='#ff6b4a';r=16+3*pulse;}
+      if(done&&cur.result.includes(i)){fill='#7cc36b';stroke='#3f8f3f';sw=3.4;r=16;}
+      c.setAttribute('fill',fill);c.setAttribute('r',r);c.setAttribute('stroke',stroke);c.setAttribute('stroke-width',sw);
+    });
+    edgeEls.forEach(o=>{
+      let op=.12,col='rgba(44,36,32,.12)',w=1.5;
+      if(visited.has(o.i)&&visited.has(o.j)){op=.5;col='rgba(255,138,101,.75)';w=2.5;}
+      if(curStep&&(o.i===curStep.cur||o.j===curStep.cur)){op=.85;col='#ff6b4a';w=2.6;}
+      o.l.setAttribute('stroke',col);o.l.setAttribute('opacity',op);o.l.setAttribute('stroke-width',w);
+    });
+    lbl.textContent=done?'top-3 결과 · L=4':('Beam Search · L=4 · hop '+(step+1));
+  }
+  return {tick,reset:()=>{loopN=-1;cur=null;loopStart=0;dur=0;},staticT:STEP*4};
+}
+
+/* ---------- wire up ---------- */
+const anims=[
+  new Anim(document.getElementById('svg1'),buildCompare),
+  new Anim(document.getElementById('svg2'),buildFDE),
+  new Anim(document.getElementById('svg3'),buildDiskANN),
+];
+const slots=[...document.querySelectorAll('.slot')];
+const dots=[...document.querySelectorAll('#rail a')];
+const cnum=document.getElementById('cnum');
+let active=-1;
+function setActive(i){
+  if(i===active)return;
+  if(active>=0)anims[active].stop();
+  active=i;
+  anims[i].start();
+  dots.forEach((d,k)=>d.classList.toggle('on',k===i));
+  cnum.textContent=String(i+1).padStart(2,'0');
+}
+const io=new IntersectionObserver((ents)=>{
+  ents.forEach(e=>{ if(e.isIntersecting&&e.intersectionRatio>=.55){ setActive(+e.target.dataset.idx); } });
+},{threshold:[.55]});
+slots.forEach(s=>io.observe(s));
+
+dots.forEach(d=>d.addEventListener('click',()=>slots[+d.dataset.go].scrollIntoView({behavior:'smooth'})));
+window.addEventListener('keydown',(e)=>{
+  if(['ArrowDown','PageDown',' '].includes(e.key)){e.preventDefault();slots[Math.min(2,active+1)].scrollIntoView({behavior:'smooth'});}
+  if(['ArrowUp','PageUp'].includes(e.key)){e.preventDefault();slots[Math.max(0,active-1)].scrollIntoView({behavior:'smooth'});}
+});
+setActive(0);
+</script>
+</body>
+</html>
