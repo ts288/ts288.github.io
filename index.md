@@ -9,8 +9,6 @@ title: 글 목록
 
 현재 기존 기록을 기술 블로그로 옮기며 정리하고 있습니다. 블로그에 게시되지 않은 학습 및 기술 기록은 아래 Notion에서도 확인하실 수 있습니다.
 
-Notion 학습 및 기술 기록 바로가기
-
 - [DoloPlanet 프로젝트 학습 내용 정리](https://app.notion.com/p/DoloPlanet-3073abb1a94d8077ac81c699a002987a?source=copy_link)
 - [PayCore 프로젝트 학습 내용 정리](https://app.notion.com/p/PayCore-3073abb1a94d80e28dd7cc45185071e2?source=copy_link)
 - [🚧 Stellaris 프로젝트 진행 관련 학습 & 지식(정리 필요)](https://app.notion.com/p/Stellaris-2193abb1a94d80b5abfdea5d11106962?source=copy_link)
