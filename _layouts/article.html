@@ -1,0 +1,13 @@
+---
+layout: default
+---
+
+{{ content }}
+
+<hr>
+<nav aria-label="글 목록">
+  <p>
+    <a href="{{ '/' | relative_url }}#{{ page.home_section }}">{{ page.home_section_title | escape }} 글 목록</a>
+    · <a href="{{ '/' | relative_url }}">블로그 홈으로</a>
+  </p>
+</nav>

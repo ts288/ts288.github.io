@@ -13,8 +13,28 @@ title: 글 목록
 
 ## 게시한 글
 
+### 프로젝트 기록
+
 - [임베딩 테스트 기록]({{ '/embedding-test/' | relative_url }})
 - [추천·검색 논문을 바탕으로 숏폼 피드 아키텍처 설계하기]({{ '/shortform-feed/' | relative_url }})
+
+### Spring
+
+<h4 id="spring-general">일반</h4>
+
+{% include article-list.html category="spring" topic="general" %}
+
+<h4 id="spring-webflux-reactor">WebFlux·Reactor</h4>
+
+{% include article-list.html category="spring" topic="webflux-reactor" %}
+
+<h3 id="database">데이터베이스</h3>
+
+{% include article-list.html category="database" %}
+
+<h3 id="development-notes">기타 개발 기록</h3>
+
+{% include article-list.html category="development-notes" %}
 
 ## 시리즈
 

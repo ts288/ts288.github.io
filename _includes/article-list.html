@@ -1,0 +1,9 @@
+{% assign articles = site.pages | where: 'layout', 'article' | where: 'category', include.category | sort: 'list_order' %}
+{% if include.topic %}
+  {% assign articles = articles | where: 'topic', include.topic %}
+{% endif %}
+<ul>
+  {% for article in articles %}
+    <li><a href="{{ article.url | relative_url }}">{{ article.title | escape }}</a></li>
+  {% endfor %}
+</ul>
