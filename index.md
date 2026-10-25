@@ -19,3 +19,4 @@ title: 글 목록
 ## 시리즈
 
 - [DDIA]({{ '/series/ddia/' | relative_url }}) — 8개 글
+- [운영체제]({{ '/series/operating-systems/' | relative_url }}) — 12개 글
