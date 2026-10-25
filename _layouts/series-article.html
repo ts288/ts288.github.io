@@ -1,0 +1,28 @@
+---
+layout: default
+---
+
+{{ content }}
+
+{% assign articles = site.pages | where: 'series_key', page.series_key | sort: 'series_order' %}
+{% for article in articles %}
+  {% if article.url == page.url %}
+    {% assign previous_index = forloop.index0 | minus: 1 %}
+    {% assign next_index = forloop.index0 | plus: 1 %}
+    <hr>
+    <nav aria-label="시리즈 탐색">
+      <p><a href="{{ page.series_url | relative_url }}">{{ page.series_title | escape }} 전체 글 목록</a></p>
+      <ul>
+        {% if previous_index >= 0 %}
+          {% assign previous_article = articles[previous_index] %}
+          <li>이전 글: <a href="{{ previous_article.url | relative_url }}">{{ previous_article.title | escape }}</a></li>
+        {% endif %}
+        {% if next_index < articles.size %}
+          {% assign next_article = articles[next_index] %}
+          <li>다음 글: <a href="{{ next_article.url | relative_url }}">{{ next_article.title | escape }}</a></li>
+        {% endif %}
+      </ul>
+    </nav>
+    {% break %}
+  {% endif %}
+{% endfor %}

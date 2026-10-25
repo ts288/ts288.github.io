@@ -1,0 +1,16 @@
+---
+layout: default
+---
+
+{{ content }}
+
+{% assign articles = site.pages | where: 'series_key', page.list_series_key | sort: 'series_order' %}
+<ol>
+  {% for article in articles %}
+    <li>
+      <a href="{{ article.url | relative_url }}">{{ article.title | escape }}</a>{% if article.empty_source %} <small>— 원문에 본문 없음</small>{% endif %}
+    </li>
+  {% endfor %}
+</ol>
+
+<p><a href="{{ '/' | relative_url }}">블로그 홈으로</a></p>
